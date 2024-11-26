@@ -65,7 +65,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         data: {
           model: 'Qwen/Qwen2.5-Coder-14B-Instruct-GGUF',
           messages: messages,
-          temperature: 0.3,
+          temperature: 0.7,
           max_tokens: 1200,
           stream: true,
         },
@@ -148,7 +148,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         data: {
           model: 'Qwen/Qwen2.5-Coder-14B-Instruct-GGUF',
           messages: messages,
-          temperature: 0.3,
+          temperature: 0.7,
           max_tokens: 1200,
           stream: true,
         },

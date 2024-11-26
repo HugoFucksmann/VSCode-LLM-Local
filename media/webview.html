@@ -256,28 +256,36 @@
         });
 
         function updateTabs(tabs) {
-          const tabsList = document.getElementById('tabsList');
-          tabsList.innerHTML = '';
-          currentTabs = tabs.map((tab) => {
+          const tabsContainer = document.getElementById('tabsContainer');
+          tabsContainer.innerHTML = ''; // Limpiar el contenido previo
+
+          tabs.forEach((tab) => {
+            const tabItem = document.createElement('div');
+            tabItem.className = 'tab-item';
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.classList.add('tab-checkbox');
+            checkbox.className = 'tab-checkbox';
             checkbox.value = tab.uri;
+            checkbox.id = `checkbox-${tab.uri}`;
 
             const label = document.createElement('label');
+            label.htmlFor = `checkbox-${tab.uri}`;
             label.textContent = tab.label;
-            label.classList.add('tab-item');
-            label.appendChild(checkbox);
 
-            tabsList.appendChild(label);
-
-            return {
-              uri: tab.uri,
-              checked: false,
-              element: checkbox,
-            };
+            tabItem.appendChild(checkbox);
+            tabItem.appendChild(label);
+            tabsContainer.appendChild(tabItem);
           });
         }
+
+        window.addEventListener('message', (event) => {
+          const { type, tabs } = event.data;
+
+          if (type === 'updateTabs') {
+            updateTabs(tabs);
+          }
+        });
 
         async function continueGeneration() {
           vscode.postMessage({
