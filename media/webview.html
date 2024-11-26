@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <style>
+      body {
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        max-height: 98vh;
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+        background-color: #121212;
+      }
+      textarea {
+        width: 100%;
+        height: 100px;
+        margin-bottom: 10px;
+        resize: vertical;
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        background-color: #373641;
+        color: #f8f8f2;
+      }
+      button {
+        margin: 5px;
+        padding: 8px;
+        cursor: pointer;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      #tabsContainer {
+        margin: 10px 0;
+        max-height: 150px;
+        min-height: 50px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        border-radius: 4px;
+        background-color: #1e1e1e;
+      }
+      .tab-checkbox {
+        margin: 5px 0;
+      }
+      #responseContainer {
+        margin-top: 10px;
+        padding: 10px;
+        background: #1e1e1e;
+        flex-grow: 1;
+        overflow-y: auto;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+      }
+      #responseContainer pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        color: #dcdcdc;
+      }
+      .tab-item {
+        display: flex;
+        align-items: center;
+        margin: 4px 0;
+      }
+      .tab-item input[type='checkbox'] {
+        margin-right: 8px;
+      }
+      h1,
+      h2,
+      h3 {
+        color: white;
+      }
+      .code-container {
+        background: #3d4451;
+        padding: 6px;
+        border-radius: 8px;
+        margin: 10px 0;
+      }
+      .code-block {
+        background-color: rgb(43, 43, 52); /* Fondo claro */
+        border: 1px solid #ddd; /* Borde ligero */
+        border-radius: 5px; /* Bordes redondeados */
+        padding: 10px; /* Espaciado interno */
+        overflow-x: auto; /* Scroll horizontal si el código es muy largo */
+        font-family: 'Courier New', Courier, monospace; /* Fuente monoespaciada */
+      }
+      .code-container pre {
+        background: #2d2d2d;
+        padding: 10px;
+        border-radius: 8px;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        color: #f8f8f2;
+        margin: 0;
+      }
+
+      code[class*='language-'],
+      pre[class*='language-'] {
+        color: #f8f8f2;
+        background: none;
+        font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+        font-size: 1em;
+        text-align: left;
+        white-space: pre;
+        word-spacing: normal;
+        word-break: normal;
+        word-wrap: normal;
+        line-height: 1.5;
+        margin: 0;
+        padding: 0;
+        overflow: auto;
+        tab-size: 4;
+        hyphens: none;
+      }
+
+      .token.comment,
+      .token.prolog,
+      .token.doctype,
+      .token.cdata {
+        color: #6272a4;
+      }
+
+      .token.punctuation {
+        color: #f8f8f2;
+      }
+
+      .namespace {
+        opacity: 0.7;
+      }
+
+      .token.property,
+      .token.tag,
+      .token.constant,
+      .token.symbol,
+      .token.deleted {
+        color: #ff79c6;
+      }
+
+      .token.boolean,
+      .token.number {
+        color: #bd93f9;
+      }
+
+      .token.selector,
+      .token.attr-name,
+      .token.string,
+      .token.char,
+      .token.builtin,
+      .token.inserted {
+        color: #50fa7b;
+      }
+
+      .token.operator,
+      .token.entity,
+      .token.url,
+      .language-css .token.string,
+      .style .token.string,
+      .token.variable {
+        color: #f8f8f2;
+      }
+
+      .token.atrule,
+      .token.attr-value,
+      .token.function,
+      .token.class-name {
+        color: #f1fa8c;
+      }
+
+      .token.keyword {
+        color: #ff79c6;
+      }
+
+      .token.regex,
+      .token.important {
+        color: #fd971f;
+      }
+
+      .token.important,
+      .token.bold {
+        font-weight: bold;
+      }
+
+      .token.italic {
+        font-style: italic;
+      }
+
+      .token.entity {
+        cursor: help;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="promptInput" placeholder="Enter your prompt here..."></textarea>
+    <div id="tabsContainer">
+      <h3>Select tabs for context:</h3>
+      <div id="tabsList"></div>
+    </div>
+    <button id="sendButton">Send</button>
+    <div id="responseContainer">
+      <pre id="response" class="language-markdown"></pre>
+      <button id="continueButton" style="margin-top: 10px">Continuar Generando</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/components/prism-markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.0/marked.min.js"></script>
+    <script>
+      (function () {
+        const vscode = acquireVsCodeApi();
+        let currentTabs = [];
+        let isProcessing = false;
+        let currentResponse = '';
+
+        // Request open tabs when the webview loads
+        window.addEventListener('load', () => {
+          vscode.postMessage({ type: 'getOpenTabs' });
+          document.getElementById('continueButton').addEventListener('click', () => {
+            if (isProcessing) return;
+            isProcessing = true;
+            hideContinueButton();
+            continueGeneration();
+          });
+        });
+
+        // Handle messages from the extension
+        window.addEventListener('message', (event) => {
+          const message = event.data;
+
+          switch (message.type) {
+            case 'updateTabs':
+              updateTabs(message.tabs);
+              break;
+            case 'partialResponse':
+            case 'response':
+              updateResponse(message.content);
+              break;
+          }
+        });
+
+        document.getElementById('sendButton').addEventListener('click', () => {
+          const prompt = document.getElementById('promptInput').value;
+          const selectedTabs = currentTabs.filter((tab) => tab.checked).map((tab) => tab.uri);
+
+          vscode.postMessage({ type: 'sendPrompt', prompt, selectedTabs });
+        });
+
+        function updateTabs(tabs) {
+          const tabsList = document.getElementById('tabsList');
+          tabsList.innerHTML = '';
+          currentTabs = tabs.map((tab) => {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.classList.add('tab-checkbox');
+            checkbox.value = tab.uri;
+
+            const label = document.createElement('label');
+            label.textContent = tab.label;
+            label.classList.add('tab-item');
+            label.appendChild(checkbox);
+
+            tabsList.appendChild(label);
+
+            return {
+              uri: tab.uri,
+              checked: false,
+              element: checkbox,
+            };
+          });
+        }
+
+        async function continueGeneration() {
+          vscode.postMessage({
+            type: 'continueGeneration',
+            currentResponse: currentResponse,
+          });
+        }
+
+        function updateResponse(content) {
+          currentResponse = content;
+          const responseElement = document.getElementById('response');
+          responseElement.innerHTML = ''; // Limpiar contenido previo
+
+          // Separar el texto en partes (bloques de código y texto normal)
+          const parts = content.split(/(```[\s\S]*?```)/); // Dividir por bloques de código delimitados
+
+          parts.forEach((part) => {
+            if (part.startsWith('```') && part.endsWith('```')) {
+              // Es un bloque de código
+              const codeContent = part.slice(3, -3).trim(); // Remover las comillas de inicio y fin
+              const codeElement = document.createElement('pre'); // Contenedor del código
+              codeElement.className = 'code-block'; // Clase para estilo
+              codeElement.innerHTML = Prism.highlight(codeContent, Prism.languages.javascript, 'javascript'); // Resaltar
+              responseElement.appendChild(codeElement); // Añadir al contenedor principal
+            } else {
+              // Es texto normal
+              const textElement = document.createElement('p');
+              textElement.textContent = part.trim();
+              responseElement.appendChild(textElement);
+            }
+          });
+        }
+
+        function showContinueButton() {
+          document.getElementById('continueButton').style.display = 'block';
+        }
+
+        function hideContinueButton() {
+          document.getElementById('continueButton').style.display = 'none';
+        }
+      })();
+    </script>
+  </body>
+</html>
