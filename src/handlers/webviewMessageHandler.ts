@@ -18,12 +18,6 @@ export class WebviewMessageHandler implements WebviewMessageHandlerInterface {
     console.log('[WebviewMessageHandler] Received message:', data.type, data);
 
     switch (data.type) {
-      /*  case 'analyze':
-        vscode.commands.executeCommand('cursorIA.analyzeCode');
-        break;
-      case 'fix':
-        vscode.commands.executeCommand('cursorIA.fixCode');
-        break; */
       case 'clearMemory':
         await this.aiService.clearMemory(); // Llama al método para limpiar la memoria
         webviewView.webview.postMessage({ type: 'memoryCleared' }); // Opcional: notifica al webview
@@ -68,25 +62,17 @@ export class WebviewMessageHandler implements WebviewMessageHandlerInterface {
     });
   }
 
+  private isLoading: boolean = false;
   private async handleSendPrompt(data: any, webviewView: vscode.WebviewView): Promise<void> {
+    this.setLoadingState(true, webviewView); // Indicar que se está cargando
+
     try {
       const response = await this.aiService.sendPrompt(data.prompt, data.selectedTabs || this.selectedTabs);
 
-      // Simular streaming de respuesta para mantener compatibilidad
-      let fullResponse = '';
-      for (let char of response.split('')) {
-        fullResponse += char;
-        webviewView.webview.postMessage({
-          type: 'partialResponse',
-          content: fullResponse,
-        });
-        // Simular tiempo entre caracteres
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      }
-
+      // Enviar respuesta completa directamente
       webviewView.webview.postMessage({
         type: 'response',
-        content: fullResponse,
+        content: response,
       });
     } catch (error) {
       console.error('Error processing prompt:', error);
@@ -94,7 +80,17 @@ export class WebviewMessageHandler implements WebviewMessageHandlerInterface {
         type: 'response',
         content: 'Error processing prompt. Please try again.',
       });
+    } finally {
+      this.setLoadingState(false, webviewView); // Indicar que ha terminado de cargar
     }
+  }
+
+  private setLoadingState(isLoading: boolean, webviewView: vscode.WebviewView): void {
+    this.isLoading = isLoading;
+    webviewView.webview.postMessage({
+      type: 'loading',
+      content: this.isLoading,
+    });
   }
 
   private async handleContinueGeneration(data: any, webviewView: vscode.WebviewView): Promise<void> {
