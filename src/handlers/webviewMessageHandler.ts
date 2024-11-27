@@ -18,11 +18,15 @@ export class WebviewMessageHandler implements WebviewMessageHandlerInterface {
     console.log('[WebviewMessageHandler] Received message:', data.type, data);
 
     switch (data.type) {
-      case 'analyze':
+      /*  case 'analyze':
         vscode.commands.executeCommand('cursorIA.analyzeCode');
         break;
       case 'fix':
         vscode.commands.executeCommand('cursorIA.fixCode');
+        break; */
+      case 'clearMemory':
+        await this.aiService.clearMemory(); // Llama al método para limpiar la memoria
+        webviewView.webview.postMessage({ type: 'memoryCleared' }); // Opcional: notifica al webview
         break;
       case 'getOpenTabs':
         const openTabs = await this.fileService.getOpenTabs();
@@ -41,6 +45,7 @@ export class WebviewMessageHandler implements WebviewMessageHandlerInterface {
       case 'continueGeneration':
         await this.handleContinueGeneration(data, webviewView);
         break;
+
       default:
         console.log('[WebviewMessageHandler] Unknown message type:', data.type);
     }
@@ -67,9 +72,21 @@ export class WebviewMessageHandler implements WebviewMessageHandlerInterface {
     try {
       const response = await this.aiService.sendPrompt(data.prompt, data.selectedTabs || this.selectedTabs);
 
+      // Simular streaming de respuesta para mantener compatibilidad
+      let fullResponse = '';
+      for (let char of response.split('')) {
+        fullResponse += char;
+        webviewView.webview.postMessage({
+          type: 'partialResponse',
+          content: fullResponse,
+        });
+        // Simular tiempo entre caracteres
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+
       webviewView.webview.postMessage({
         type: 'response',
-        content: response,
+        content: fullResponse,
       });
     } catch (error) {
       console.error('Error processing prompt:', error);

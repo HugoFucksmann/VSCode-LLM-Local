@@ -3,10 +3,11 @@ import axios from 'axios';
 import { AIServiceInterface, Message } from './types';
 
 export class AIService implements AIServiceInterface {
+  private messageHistory: Message[] = [];
   private async processStreamedResponse(
     messages: Message[],
-    maxTokens: number = 1200,
-    temperature: number = 0.3,
+    maxTokens: number = 600,
+    temperature: number = 0.2,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
@@ -65,12 +66,15 @@ export class AIService implements AIServiceInterface {
 
     const fullPrompt = `${prompt}${selectedFilesContent}`;
 
-    const messages: Message[] = [
-      { role: 'system', content: 'Act as a helpful assistant.' },
-      { role: 'user', content: fullPrompt },
-    ];
+    const userMessage: Message = { role: 'user', content: fullPrompt };
+    this.messageHistory.push(userMessage);
 
-    return this.processStreamedResponse(messages);
+    const response = await this.processStreamedResponse(this.messageHistory);
+
+    const assistantMessage: Message = { role: 'assistant', content: response };
+    this.messageHistory.push(assistantMessage);
+
+    return response;
   }
 
   public async continueGeneration(currentResponse: string, selectedTabs: string[]): Promise<string> {
@@ -79,19 +83,28 @@ export class AIService implements AIServiceInterface {
         ? `\n\n---\n\nAdditional Context:\n${await this.getSelectedFilesContent(selectedTabs)}`
         : '';
 
-    const messages: Message[] = [
-      { role: 'system', content: 'Act as a helpful assistant.' },
-      { role: 'assistant', content: currentResponse },
-      { role: 'user', content: `continue${selectedFilesContent}` },
-    ];
+    const continuationPrompt: Message = {
+      role: 'user',
+      content: `continue${selectedFilesContent}`,
+    };
 
-    return this.processStreamedResponse(messages);
+    this.messageHistory.push(continuationPrompt);
+
+    const response = await this.processStreamedResponse(this.messageHistory);
+
+    const assistantMessage: Message = { role: 'assistant', content: response };
+    this.messageHistory.push(assistantMessage);
+
+    return response;
   }
 
   private async getSelectedFilesContent(selectedTabs: string[]): Promise<string> {
-    // Esta implementación podría delegar a FileService
-    // Por simplicidad, lo dejamos como método privado aquí
-    // En un diseño más complejo, consideraríamos inyectar FileService
+    // Procesa contenido de archivos aquí
     return selectedTabs.join(', ');
   }
+
+  public clearMemory(): void {
+    this.messageHistory = []; // Reinicia el historial
+  }
 }
+

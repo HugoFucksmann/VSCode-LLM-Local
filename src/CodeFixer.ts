@@ -13,8 +13,8 @@ export class CodeFixer {
         "http://localhost:1234/v1/chat/completions ",
         {
           prompt: `Fix the following code:\n\n${code}`,
-          temperature: 0.3,
-          max_tokens: 1000,
+          temperature: 0.2,
+          max_tokens: 600,
         }
       );
 

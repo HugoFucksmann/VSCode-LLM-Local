@@ -4,20 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-  
+
     <title>CursorIA Sidebar</title>
-  
   </head>
   <body>
-    <textarea id="promptInput" placeholder="Enter your prompt here..."></textarea>
     <div id="tabsContainer">
       <h3>Select tabs for context:</h3>
       <div id="tabsList"></div>
     </div>
-    <button id="sendButton">Send</button>
-    <div id="responseContainer">
-      <pre id="response" class="language-markdown"></pre>
-      <button id="continueButton" style="margin-top: 10px">Continuar Generando</button>
+
+    <div id="chatContainer"></div>
+
+    <div id="inputContainer">
+      <textarea id="promptInput" placeholder="Enter your prompt here..."></textarea>
+      <button id="sendButton">Send</button>
+    </div>
+
+    <div class="action-buttons">
+      <button id="continueButton">Continue Generating</button>
+      <button id="clearMemory">Clear Memory</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/prism.min.js"></script>
@@ -30,15 +35,74 @@
         let currentTabs = [];
         let isProcessing = false;
         let currentResponse = '';
+        const chatContainer = document.getElementById('chatContainer');
+        const promptInput = document.getElementById('promptInput');
+        const sendButton = document.getElementById('sendButton');
+        const continueButton = document.getElementById('continueButton');
+        const clearMemoryButton = document.getElementById('clearMemory');
+
+        function addMessage(content, type = 'system') {
+          const messageDiv = document.createElement('div');
+          messageDiv.classList.add('message', `${type}-message`);
+
+          // Separar el texto en partes (bloques de código y texto normal)
+          const parts = content.split(/(```[\s\S]*?```)/);
+
+          parts.forEach((part) => {
+            if (part.startsWith('```') && part.endsWith('```')) {
+              // Es un bloque de código
+              const codeContent = part.slice(3, -3).trim();
+              const codeElement = document.createElement('pre');
+              codeElement.classList.add('code-block');
+              codeElement.innerHTML = Prism.highlight(codeContent, Prism.languages.javascript, 'javascript');
+              messageDiv.appendChild(codeElement);
+            } else {
+              // Es texto normal
+              const textElement = document.createElement('p');
+              textElement.textContent = part.trim();
+              messageDiv.appendChild(textElement);
+            }
+          });
+
+          chatContainer.appendChild(messageDiv);
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
 
         // Request open tabs when the webview loads
         window.addEventListener('load', () => {
           vscode.postMessage({ type: 'getOpenTabs' });
-          document.getElementById('continueButton').addEventListener('click', () => {
+
+          sendButton.addEventListener('click', () => {
+            const prompt = promptInput.value;
+            if (!prompt.trim()) return;
+
+            // Añadir mensaje del usuario
+            addMessage(prompt, 'user');
+
+            const selectedTabs = currentTabs.filter((tab) => tab.element.checked).map((tab) => tab.uri);
+
+            vscode.postMessage({
+              type: 'sendPrompt',
+              prompt,
+              selectedTabs,
+            });
+
+            // Limpiar input
+            promptInput.value = '';
+          });
+
+          // Evento para el botón "Continuar Generando"
+          continueButton.addEventListener('click', () => {
             if (isProcessing) return;
             isProcessing = true;
-            hideContinueButton();
             continueGeneration();
+          });
+
+          // Evento para el botón "Clear Memory"
+          clearMemoryButton.addEventListener('click', () => {
+            vscode.postMessage({ type: 'clearMemory' });
+            chatContainer.innerHTML = ''; // Limpiar chat
+            currentResponse = '';
           });
         });
 
@@ -52,58 +116,49 @@
               break;
             case 'partialResponse':
             case 'response':
-              updateResponse(message.content);
+              currentResponse = message.content;
+              addMessage(message.content);
+              break;
+            case 'memoryCleared':
+              console.log('Memory successfully cleared');
+              alert('Memory successfully cleared');
               break;
           }
         });
 
-        document.getElementById('sendButton').addEventListener('click', () => {
-  const prompt = document.getElementById('promptInput').value;
-  const selectedTabs = currentTabs
-    .filter((tab) => tab.element.checked)
-    .map((tab) => tab.uri);
-
-  console.log('Sending prompt with tabs:', selectedTabs);  // Agrega este log
-
-  vscode.postMessage({ 
-    type: 'sendPrompt', 
-    prompt, 
-    selectedTabs 
-  });
-});
-
         function updateTabs(tabs) {
-  const tabsList = document.getElementById('tabsList');
-  tabsList.innerHTML = '';
-  currentTabs = tabs.map((tab) => {
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.classList.add('tab-checkbox');
-    checkbox.value = tab.uri;
+          const tabsList = document.getElementById('tabsList');
+          tabsList.innerHTML = '';
+          currentTabs = tabs.map((tab) => {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.classList.add('tab-checkbox');
+            checkbox.value = tab.uri;
 
-    // AGREGA ESTE EVENT LISTENER
-    checkbox.addEventListener('change', (event) => {
-      vscode.postMessage({
-        type: 'toggleTab', 
-        tabUri: tab.uri, 
-        isSelected: event.target.checked
-      });
-    });
+            // AGREGA ESTE EVENT LISTENER
+            checkbox.addEventListener('change', (event) => {
+              vscode.postMessage({
+                type: 'toggleTab',
+                tabUri: tab.uri,
+                isSelected: event.target.checked,
+              });
+            });
 
-    const label = document.createElement('label');
-    label.textContent = tab.label;
-    label.classList.add('tab-item');
-    label.appendChild(checkbox);
+            const label = document.createElement('label');
+            label.textContent = tab.label;
+            label.classList.add('tab-item');
+            label.appendChild(checkbox);
 
-    tabsList.appendChild(label);
+            tabsList.appendChild(label);
 
-    return {
-      uri: tab.uri,
-      checked: false,
-      element: checkbox,
-    };
-  });
-}
+            return {
+              uri: tab.uri,
+              checked: false,
+              element: checkbox,
+            };
+          });
+        }
+
         async function continueGeneration() {
           vscode.postMessage({
             type: 'continueGeneration',
@@ -111,6 +166,7 @@
           });
         }
 
+        let fullConversation = ''; // Almacena la conversación completa
         function updateResponse(content) {
           currentResponse = content;
           const responseElement = document.getElementById('response');
