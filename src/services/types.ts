@@ -12,8 +12,13 @@ export interface Message {
 }
 
 export interface AIServiceInterface {
-  sendPrompt(prompt: string, selectedTabs: string[]): Promise<string>;
+  sendPrompt(
+    prompt: string,
+    selectedTabs: string[],
+    onPartialResponse?: (content: string) => void,
+  ): Promise<void>;
   continueGeneration(currentResponse: string, selectedTabs: string[]): Promise<string>;
+  clearMemory(): void;
 }
 
 export interface FileServiceInterface {

@@ -8,6 +8,7 @@ export class AIService implements AIServiceInterface {
     messages: Message[],
     maxTokens: number = 600,
     temperature: number = 0.2,
+    onPartialResponse?: (content: string) => void,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
@@ -41,6 +42,10 @@ export class AIService implements AIServiceInterface {
 
                     if (content) {
                       fullResponse += content;
+                      // Enviar respuesta parcial si hay un callback
+                      if (onPartialResponse) {
+                        onPartialResponse(fullResponse);
+                      }
                     }
                   } catch (parseError) {
                     console.error('Error parsing JSON:', parseError);
@@ -58,23 +63,29 @@ export class AIService implements AIServiceInterface {
     });
   }
 
-  public async sendPrompt(prompt: string, selectedTabs: string[]): Promise<string> {
-    const selectedFilesContent =
-      selectedTabs.length > 0
-        ? `\n\n---\n\nAdditional Context:\n${await this.getSelectedFilesContent(selectedTabs)}`
-        : '';
+  public async sendPrompt(
+    prompt: string,
+    selectedTabs: string[],
+    onPartialResponse?: (content: string) => void,
+  ): Promise<void> {
+    try {
+      // Agregar el prompt del usuario al historial
+      this.messageHistory.push({ role: 'user', content: prompt });
 
-    const fullPrompt = `${prompt}${selectedFilesContent}`;
+      // Obtener la respuesta del modelo
+      const response = await this.processStreamedResponse(
+        this.messageHistory,
+        600,
+        0.2,
+        onPartialResponse,
+      );
 
-    const userMessage: Message = { role: 'user', content: fullPrompt };
-    this.messageHistory.push(userMessage);
-
-    const response = await this.processStreamedResponse(this.messageHistory);
-
-    const assistantMessage: Message = { role: 'assistant', content: response };
-    this.messageHistory.push(assistantMessage);
-
-    return response;
+      // Agregar la respuesta al historial
+      this.messageHistory.push({ role: 'assistant', content: response });
+    } catch (error) {
+      console.error('Error in sendPrompt:', error);
+      throw error;
+    }
   }
 
   public async continueGeneration(currentResponse: string, selectedTabs: string[]): Promise<string> {
@@ -107,4 +118,3 @@ export class AIService implements AIServiceInterface {
     this.messageHistory = []; // Reinicia el historial
   }
 }
-

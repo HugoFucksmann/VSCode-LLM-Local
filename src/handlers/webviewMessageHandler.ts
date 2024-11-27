@@ -67,13 +67,16 @@ export class WebviewMessageHandler implements WebviewMessageHandlerInterface {
     this.setLoadingState(true, webviewView); // Indicar que se está cargando
 
     try {
-      const response = await this.aiService.sendPrompt(data.prompt, data.selectedTabs || this.selectedTabs);
-
-      // Enviar respuesta completa directamente
-      webviewView.webview.postMessage({
-        type: 'response',
-        content: response,
-      });
+      await this.aiService.sendPrompt(
+        data.prompt,
+        data.selectedTabs || this.selectedTabs,
+        (partialResponse: string) => {
+          webviewView.webview.postMessage({
+            type: 'partialResponse',
+            content: partialResponse,
+          });
+        }
+      );
     } catch (error) {
       console.error('Error processing prompt:', error);
       webviewView.webview.postMessage({
