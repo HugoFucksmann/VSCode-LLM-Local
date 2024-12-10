@@ -14,6 +14,8 @@ export interface Message {
 export interface AIServiceInterface {
   sendPrompt(prompt: string, selectedTabs: string[]): Promise<string>;
   continueGeneration(currentResponse: string, selectedTabs: string[]): Promise<string>;
+  clearMemory(): void;
+  findSimilarText(query: string, textList: string[]): Promise<Array<{text: string, similarity: number}>>;
 }
 
 export interface FileServiceInterface {
